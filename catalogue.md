@@ -1,12 +1,14 @@
 # Go sabotage catalogue
-Pinned to: go1.26.5   <- run `go version`, record it here, and
-re-verify every entry whenever you upgrade (Sunday checklist item).
-Drilling a defect the toolchain no longer produces is folklore —
-loop-variable capture died in Go 1.22.
+Pinned to: go1.26.5   <- run `go version`, record it here, and run
+`scripts/catalogue-verify/run.sh` whenever you upgrade (Sunday
+checklist item). Drilling a defect the toolchain no longer produces
+is folklore — loop-variable capture died in Go 1.22.
 
 ## Memory and value semantics
 - slice aliasing after `append` on a shared backing array
-- the result of `append` not reassigned
+- the result of `append` not reassigned (plant it as assign-to-a-local
+  /parameter the caller can't see; a bare `append(s, v)` statement is a
+  compile error, "value not used", so it never survives to review)
 - a large struct copied in a `range`
 - a value receiver mutating a copy
 - a method set mismatch between pointer and value
@@ -30,7 +32,11 @@ loop-variable capture died in Go 1.22.
 - `WaitGroup.Add` called inside the goroutine rather than before it
 - an unbuffered channel deadlock
 - a context accepted but never propagated
-- `time.After` inside a loop leaking timers
+- `time.After` inside a loop resetting the timeout every iteration
+  (per-iteration deadline where a total one was meant). NOTE: the old
+  "leaks timers" framing is STALE — Go 1.23 made unreferenced timers
+  GC-reclaimable; verified reclaimed on go1.26.5. Plant the semantic
+  bug, not the leak.
 - a data race on a shared struct field
 - a mutex released on one path but not another
 
