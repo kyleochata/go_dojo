@@ -1,5 +1,5 @@
 # Go sabotage catalogue
-Pinned to: goX.XX.X   <- run `go version`, record it here, and
+Pinned to: go1.26.5   <- run `go version`, record it here, and
 re-verify every entry whenever you upgrade (Sunday checklist item).
 Drilling a defect the toolchain no longer produces is folklore —
 loop-variable capture died in Go 1.22.
