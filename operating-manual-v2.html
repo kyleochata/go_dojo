@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Operating Manual — The Go-Native Plan</title>
+<style>
+  :root{
+    --paper:#f6f8f9;
+    --card:#ffffff;
+    --ink:#122a35;
+    --ink-soft:#4a6470;
+    --line:#dde6ea;
+    --cyan:#00add8;
+    --cyan-deep:#007d9c;
+    --cyan-wash:#e6f6fb;
+    --amber:#c8871e;
+    --amber-wash:#fdf3e3;
+    --red:#c04a3a;
+    --mono:ui-monospace,'SF Mono','Cascadia Code','JetBrains Mono',Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important;animation:none!important}}
+  body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.6}
+  .wrap{max-width:880px;margin:0 auto;padding:0 20px 96px}
+
+  /* ---------- header ---------- */
+  header{padding:56px 0 40px;border-bottom:2px solid var(--ink)}
+  .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--cyan-deep);margin-bottom:14px}
+  h1{font-family:var(--mono);font-size:clamp(26px,4.6vw,40px);font-weight:700;letter-spacing:-.02em;line-height:1.15}
+  h1 .caret{color:var(--cyan)}
+  .lede{margin-top:18px;max-width:64ch;color:var(--ink-soft)}
+  .lede strong{color:var(--ink)}
+
+  /* ---------- section chrome ---------- */
+  section{margin-top:56px}
+  .sec-label{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--cyan-deep);display:flex;align-items:center;gap:10px;margin-bottom:10px}
+  .sec-label::after{content:"";flex:1;height:1px;background:var(--line)}
+  h2{font-family:var(--mono);font-size:clamp(20px,3vw,26px);font-weight:700;letter-spacing:-.01em;margin-bottom:14px}
+  h3{font-size:16px;font-weight:650;margin:22px 0 8px}
+  p{margin-bottom:12px;max-width:70ch}
+  p:last-child{margin-bottom:0}
+
+  /* ---------- code blocks ---------- */
+  .term{position:relative;background:#0f2530;color:#d8e6ec;border-radius:8px;padding:16px 18px;font-family:var(--mono);font-size:13.5px;line-height:1.6;overflow-x:auto;margin:12px 0;white-space:pre;tab-size:2}
+  .term .cm{color:#5f7f8c}
+  .term .pr{color:var(--cyan)}
+  .term .st{color:#e6c07b}
+  .copy-btn{position:absolute;top:8px;right:8px;background:#1b3a48;color:#9cc3d1;border:1px solid #2c4f5e;border-radius:6px;font-family:var(--mono);font-size:11px;padding:4px 10px;cursor:pointer}
+  .copy-btn:hover{background:#24485a;color:#fff}
+  .copy-btn:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+  code.inl{font-family:var(--mono);font-size:.86em;background:var(--cyan-wash);color:var(--cyan-deep);padding:1px 6px;border-radius:4px;white-space:nowrap}
+
+  /* ---------- cards ---------- */
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:16px}
+  @media(max-width:720px){.grid3{grid-template-columns:1fr}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px}
+  .card h4{font-family:var(--mono);font-size:14px;letter-spacing:.04em;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+  .dot{width:9px;height:9px;border-radius:50%;flex:none}
+  .card p{font-size:14px;color:var(--ink-soft);margin-bottom:8px}
+  .card .rule{font-size:13px;border-top:1px dashed var(--line);padding-top:8px;color:var(--ink)}
+  .card .rule b{color:var(--red)}
+
+  /* ---------- weekly pipeline (signature) ---------- */
+  .pipeline{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-top:18px}
+  @media(max-width:820px){.pipeline{grid-template-columns:repeat(3,1fr)}}
+  @media(max-width:520px){.pipeline{grid-template-columns:repeat(2,1fr)}}
+  .day{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 12px 14px;cursor:pointer;text-align:left;font-family:inherit;transition:border-color .15s, transform .15s;position:relative}
+  .day:hover{border-color:var(--cyan)}
+  .day:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+  .day.active{border-color:var(--cyan);box-shadow:0 0 0 1px var(--cyan)}
+  .day .d-name{font-family:var(--mono);font-size:13px;font-weight:700}
+  .day .d-name::before{content:"❯ ";color:var(--cyan)}
+  .day .d-slot{font-size:12.5px;color:var(--ink-soft);margin-top:4px;line-height:1.4}
+  .day .d-min{font-family:var(--mono);font-size:11px;color:var(--cyan-deep);margin-top:6px}
+  .badge{display:inline-block;font-family:var(--mono);font-size:10px;letter-spacing:.06em;padding:2px 7px;border-radius:20px;margin-top:6px}
+  .badge.drop{background:var(--amber-wash);color:var(--amber)}
+  .badge.prep{background:var(--cyan-wash);color:var(--cyan-deep)}
+  .drop-note{display:flex;gap:10px;align-items:flex-start;background:var(--amber-wash);border:1px solid #eddcb8;border-radius:8px;padding:12px 14px;font-size:14px;margin-top:14px}
+  .drop-note b{color:var(--amber)}
+
+  /* ---------- playbook panel ---------- */
+  .playbook{background:var(--card);border:1px solid var(--cyan);border-radius:10px;margin-top:14px;overflow:hidden}
+  .pb-head{background:var(--cyan-wash);padding:12px 18px;font-family:var(--mono);font-size:14px;font-weight:700;display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px}
+  .pb-head .t{color:var(--cyan-deep);font-weight:400;font-size:12.5px}
+  .pb-body{padding:6px 18px 18px}
+  .step{display:grid;grid-template-columns:64px 1fr;gap:12px;padding:12px 0;border-bottom:1px dashed var(--line)}
+  .step:last-child{border-bottom:none}
+  .step .min{font-family:var(--mono);font-size:12px;color:var(--cyan-deep);padding-top:2px;white-space:nowrap}
+  .step .what{font-size:14.5px}
+  .step .what b{font-weight:650}
+  .step .what .sub{color:var(--ink-soft);font-size:13.5px;margin-top:3px}
+  .step .term{margin:8px 0 0;font-size:12.5px;padding:10px 14px}
+  .hidden{display:none}
+
+  /* ---------- accordions ---------- */
+  details{background:var(--card);border:1px solid var(--line);border-radius:10px;margin-top:10px;overflow:hidden}
+  details[open]{border-color:var(--cyan)}
+  summary{cursor:pointer;padding:14px 18px;font-weight:650;font-size:15px;list-style:none;display:flex;align-items:center;gap:10px}
+  summary::-webkit-details-marker{display:none}
+  summary::before{content:"+";font-family:var(--mono);color:var(--cyan);font-weight:700;width:14px}
+  details[open] summary::before{content:"–"}
+  summary:focus-visible{outline:2px solid var(--cyan);outline-offset:-2px}
+  .det-body{padding:0 18px 18px 42px;font-size:14.5px}
+  .det-body p{margin-bottom:10px}
+  .det-body ul{margin:0 0 10px 18px}
+  .det-body li{margin-bottom:6px}
+
+  /* ---------- repo tree ---------- */
+  .tree{font-family:var(--mono);font-size:13px;line-height:1.75;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px 20px;overflow-x:auto;margin-top:12px;white-space:pre;tab-size:2}
+  .tree .dir{color:var(--cyan-deep);font-weight:700}
+  .tree .note{color:var(--ink-soft);font-style:italic}
+  .tree .warn{color:var(--red)}
+
+  /* ---------- field notes ---------- */
+  .fn{display:grid;grid-template-columns:26px 1fr;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px 18px;margin-top:10px}
+  .fn .n{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--cyan-deep);padding-top:1px}
+  .fn h4{font-size:15px;font-weight:650;margin-bottom:5px}
+  .fn p{font-size:14px;color:var(--ink-soft);margin-bottom:6px}
+  .fn p b{color:var(--ink)}
+  .fn p:last-child{margin-bottom:0}
+
+  /* ---------- session anatomy ---------- */
+  .anatomy{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-top:14px;font-family:var(--mono);font-size:12px}
+  .anatomy>div{padding:12px 8px;text-align:center;border-right:1px solid var(--line)}
+  .anatomy>div:last-child{border-right:none}
+  .anatomy .seg-t{font-weight:700;margin-bottom:4px}
+  .anatomy .seg-m{color:var(--ink-soft);font-size:11px}
+  @media(max-width:640px){.anatomy{flex-direction:column}.anatomy>div{border-right:none;border-bottom:1px solid var(--line);text-align:left}.anatomy>div:last-child{border-bottom:none}}
+
+  /* ---------- misc ---------- */
+  .callout{background:var(--cyan-wash);border-left:3px solid var(--cyan);border-radius:0 8px 8px 0;padding:14px 16px;font-size:14.5px;margin:16px 0;max-width:none}
+  .warn-callout{background:var(--amber-wash);border-left:3px solid var(--amber)}
+  footer{margin-top:72px;border-top:2px solid var(--ink);padding-top:20px;font-family:var(--mono);font-size:12.5px;color:var(--ink-soft)}
+  a{color:var(--cyan-deep)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="eyebrow">go-dojo // operating manual</div>
+  <h1>How to actually run the plan<span class="caret">_</span></h1>
+  <p class="lede">The ruling defines <strong>what</strong> to practise. This manual defines <strong>how</strong>: the repository that holds it, the Claude Code sessions that power it, the exact commands you type each day, and the discipline points that quietly decide whether the whole thing works. One mental model before anything else: <strong>you are the reviewer being trained; Claude Code plays three separate characters; the git repo is the plan's memory.</strong> Every rule below exists to keep those three things from blurring into one.</p>
+</header>
+
+<!-- ============ SECTION 1: SETUP ============ -->
+<section id="setup">
+  <div class="sec-label">01 · one-time setup — do this before week 1</div>
+  <h2>Build the repository</h2>
+  <p>Everything lives in one local git repo. Claude Code automatically reads <code class="inl">CLAUDE.md</code> at the repo root every session — that file is how the standing rules get enforced without you re-typing them, and the <code class="inl">.claude/commands/</code> folder is how the three agent modes become one-word slash commands.</p>
+
+  <div class="tree"><span class="dir">go-dojo/</span>
+├── <span class="dir">CLAUDE.md</span>              <span class="note">← standing rules; loaded automatically every session</span>
+├── <span class="dir">.claude/commands/</span>
+│   ├── tutor.md           <span class="note">← /tutor — explain, worked examples, quiz me</span>
+│   ├── author.md          <span class="note">← /author — build worksheets + sealed answer keys</span>
+│   ├── generator.md       <span class="note">← /generator — solve (downstream only)</span>
+│   └── score.md           <span class="note">← /score — grade my work against the sealed key</span>
+├── log.md                 <span class="note">← THE product: mistakes, rungs, spaced queue, scores</span>
+├── catalogue.md           <span class="note">← the Go sabotage catalogue (version-pinned)</span>
+├── real-bugs.md           <span class="note">← production bugs + "would drills have caught it?"</span>
+├── templates/             <span class="note">← the standing template week (Sunday floor)</span>
+├── worksheets/2026-w31/   <span class="note">← one folder per ISO week: mon.md … fri.md</span>
+├── <span class="warn">sealed/</span>2026-w31/       <span class="warn">← answer keys. NEVER opened before scoring.</span>
+├── src/                   <span class="note">← your implementations — this is what Thursday hunts</span>
+└── idioms/                <span class="note">← the Go idiom deck, one file per snippet</span></div>
+
+  <h3>Step 1 — create it</h3>
+  <div class="term"><button class="copy-btn" onclick="cp(this)">copy</button><span class="pr">$</span> mkdir go-dojo && cd go-dojo && git init
+<span class="pr">$</span> mkdir -p .claude/commands templates worksheets sealed src idioms
+<span class="pr">$</span> touch CLAUDE.md log.md catalogue.md real-bugs.md
+<span class="pr">$</span> go version   <span class="cm"># record this in catalogue.md — the version pin</span></div>
+
+  <h3>Step 2 — write CLAUDE.md</h3>
+  <p>This is the constitution. Every Claude Code session in this repo obeys it without being asked. Paste this (edit freely, but keep the sealed-file and downstream rules verbatim):</p>
+  <div class="term"><button class="copy-btn" onclick="cp(this)">copy</button><span class="cm"># go-dojo — standing rules for all sessions</span>
+
+This repo is a deliberate-practice system. The human is training
+REVIEW JUDGMENT of agent-generated Go. Your job is to make them
+better at catching your mistakes — never to make things easy.
+
+## Hard rules
+1. SEALED FILES: anything in sealed/ is an answer key. Never print,
+   summarize, quote, or reference its contents unless the human runs
+   /score. If asked casually, refuse and remind them why.
+2. DOWNSTREAM ONLY: never provide a solution, fix, or implementation
+   for the current exercise until the human has shown their own
+   attempt, written hypothesis, spec, or written explanation first.
+   If they ask early, ask for their attempt instead.
+3. NO GRADE INFLATION: when scoring, be strict and cite the rubric
+   line for every point. A generous grade is a failed drill.
+4. SABOTAGE VARIANTS: when authoring bug-hunt variants, vary defect
+   placement, naming, and surrounding style every time; hide defects
+   in visually boring positions (error handling, cleanup paths), not
+   at the point of interest. Draw the defect category from
+   catalogue.md weighted toward recent units WITHOUT announcing
+   which category was drawn. Prefer real-bugs.md over catalogue.md
+   as it grows.
+5. VERSION PIN: catalogue entries must reproduce on the Go version
+   recorded at the top of catalogue.md. Flag any that no longer do.
+6. LOG DISCIPLINE: after any scored activity, append one line to
+   log.md in the existing format. Never rewrite history in log.md.</div>
+
+  <h3>Step 3 — write the three mode commands</h3>
+  <p>Each file in <code class="inl">.claude/commands/</code> becomes a slash command; <code class="inl">$ARGUMENTS</code> is whatever you type after it. Three examples — <code class="inl">score.md</code> follows the same shape:</p>
+  <div class="term"><button class="copy-btn" onclick="cp(this)">copy</button><span class="cm"># .claude/commands/tutor.md</span>
+You are in TUTOR mode. Explain, give canonical worked examples,
+and quiz me with retrieval questions. Never do my current exercise
+for me. Topic: $ARGUMENTS
+
+<span class="cm"># .claude/commands/author.md</span>
+You are in AUTHOR mode. Author the requested worksheet(s) into
+worksheets/&lt;current-week&gt;/ following templates/ as the format.
+Write every solution and rubric to sealed/&lt;current-week&gt;/ —
+I must not see them. Confirm only WHICH files you wrote,
+never their contents. Task: $ARGUMENTS
+
+<span class="cm"># .claude/commands/generator.md</span>
+You are in GENERATOR mode. I will first paste my own attempt,
+hypothesis, spec, or written explanation. Only after that, produce
+your solution so I can compare. If I haven't shown mine, refuse.
+Task: $ARGUMENTS</div>
+
+  <h3>Step 4 — author the foundation artifacts (~90 min, once)</h3>
+  <p>Four artifacts, none of which exist yet. Each one comes from exactly one of two places: <b>copy-paste out of the ruling document</b>, or <b>Claude Code writes it for you</b>. Nothing here is invented from thin air — if you're ever unsure where something comes from, that's the answer.</p>
+
+  <div class="callout"><b>Do this first:</b> drop a copy of <code class="inl">go-native-plan-final.md</code> (the audited ruling) into the repo root. Claude Code can then read the spec directly, which every prompt below relies on.
+  <div class="term" style="margin-bottom:0"><button class="copy-btn" onclick="cp(this)">copy</button><span class="pr">$</span> cp ~/Downloads/go-native-plan-final.md ./
+<span class="pr">$</span> go version   <span class="cm"># note the output — you need it in a moment</span></div></div>
+
+  <details open>
+    <summary>4a · catalogue.md — <span style="font-weight:400;color:var(--ink-soft)">copy from the ruling, then have Claude verify it</span></summary>
+    <div class="det-body">
+      <p>Open the ruling and find the section titled <b>"The sabotage catalogue"</b> — the five defect categories (memory and value semantics; maps and nil; errors; concurrency; resources). <b>That text is the catalogue.</b> Paste it into <code class="inl">catalogue.md</code> and add a version pin as the first line:</p>
+      <div class="term"><button class="copy-btn" onclick="cp(this)">copy</button><span class="cm"># Go sabotage catalogue</span>
+<span class="cm">Pinned to: go1.24.x   (update + re-verify whenever you upgrade)</span>
+
+<span class="cm">## Memory and value semantics</span>
+- slice aliasing after append on a shared backing array
+- ... <span class="cm">(paste the rest from the ruling)</span></div>
+      <p>Then verify it against your actual toolchain — this is what stops you drilling folklore like the pre-1.22 loop-variable gotcha:</p>
+      <div class="term"><button class="copy-btn" onclick="cp(this)">copy</button><span class="pr">&gt;</span> Read catalogue.md. For each entry, write a minimal Go program that
+demonstrates the defect, run it on this toolchain, and tell me if any
+entry no longer reproduces on this Go version. Flag stale ones.</div>
+    </div>
+  </details>
+
+  <details>
+    <summary>4b · templates/ — <span style="font-weight:400;color:var(--ink-soft)">Claude generates it; this is your Sunday insurance</span></summary>
+    <div class="det-body">
+      <p>The template week doesn't exist anywhere — <code class="inl">/author</code> creates it. These are the reusable default sheets that run on any week where Sunday prep doesn't happen.</p>
+      <div class="term"><button class="copy-btn" onclick="cp(this)">copy</button><span class="pr">&gt;</span> /author Build the standing template week into templates/: mon.md
+(laddered build sheet, primitive left blank), tue.md (idiom deck +
+one pattern slot), wed.md (foundations unit with a pre-test section),
+thu.md (bug hunt sheet with a verdict table for up to 5 variants),
+fri.md (the four-part explain-before-accept frame, error paths as
+section 2). Each sheet includes its written 10-minute floor version
+at the bottom.</div>
+    </div>
+  </details>
+
+  <details>
+    <summary>4c · idioms/ — <span style="font-weight:400;color:var(--ink-soft)">the ruling names the contents, Claude writes the files</span></summary>
+    <div class="det-body">
+      <p>Topic 7 of the ruling lists all eight snippets: <code class="inl">container/heap</code>, a set via <code class="inl">map[T]struct{}</code>, <code class="inl">sort.Slice</code> with a comparator, a BFS queue on a slice, two pointers, a stack, <code class="inl">strings.Builder</code>, and binary search on an answer space.</p>
+      <div class="term"><button class="copy-btn" onclick="cp(this)">copy</button><span class="pr">&gt;</span> /author Create idioms/ with one file per snippet from the idiom deck
+list in go-native-plan-final.md. Each file: the canonical minimal Go
+version at top, then a blank "type it cold" section, then 2-3 recall
+prompts.</div>
+    </div>
+  </details>
+
+  <details>
+    <summary>4d · log.md — <span style="font-weight:400;color:var(--ink-soft)">you write this one, right now, by hand</span></summary>
+    <div class="det-body">
+      <p>Just headers. Paste this in and it's done — it fills up one line at a time over twelve weeks.</p>
+      <div class="term"><button class="copy-btn" onclick="cp(this)">copy</button><span class="cm"># go-dojo log</span>
+
+<span class="cm">## Sessions</span>
+| date | day | topic | rung/score | notes (what went wrong, what I'd do differently) |
+
+<span class="cm">## Spaced re-attempt queue</span>
+| item | last attempt | due | result |
+
+<span class="cm">## Rung state</span>
+| primitive | current rung | clean runs |
+
+<span class="cm">## Tokens</span>
+| week | tokens spent | on what | did the unit close? |
+
+<span class="cm">## Real-bug verdicts</span>
+| date | bug | would this week's drills have caught it? (y/n/partial) | why |
+
+<span class="cm">## Adherence (fortnightly, 7-of-10)</span>
+| fortnight | sessions started | floors used | pass? |
+
+<span class="cm">## Parking lot (plan-change ideas — do not act until a gate review)</span></div>
+    </div>
+  </details>
+
+  <div class="term"><button class="copy-btn" onclick="cp(this)">copy</button><span class="pr">$</span> git add -A && git commit -m <span class="st">"day 0: operational"</span></div>
+
+  <div class="drop-note"><span>◆</span><div><b>The pattern that applies all twelve weeks:</b> the ruling is the spec, Claude Code is the builder, you are the client who never accepts without reading. Any time this manual says "author X" and you don't know where X comes from, the prompt shape is always the same — point Claude at the relevant section of the ruling and name the file it should write. Day 0 is your first rep of the exact relationship the whole plan trains.</div></div>
+</section>
+
+<!-- ============ SECTION 2: MODES ============ -->
+<section id="modes">
+  <div class="sec-label">02 · the three characters</div>
+  <h2>One agent, three modes, never mixed</h2>
+  <p>The single most important operational habit: <b>fresh session per mode</b>. Run <code class="inl">/clear</code> (or start a new <code class="inl">claude</code> session) when switching roles, so the Generator has never seen the Author's answer key and the scorer isn't grading its own work with parental pride.</p>
+  <div class="grid3">
+    <div class="card">
+      <h4><span class="dot" style="background:var(--cyan)"></span>/tutor</h4>
+      <p>Explanations, canonical worked examples, quizzing. Use freely, any time, upstream of your work.</p>
+      <div class="rule">Boundary: teaches the <b>concept</b>, never touches the current exercise.</div>
+    </div>
+    <div class="card">
+      <h4><span class="dot" style="background:var(--amber)"></span>/author</h4>
+      <p>Builds worksheets, specs, rubrics, sabotage variants, flash cards. Runs Sunday, mostly.</p>
+      <div class="rule">Boundary: every answer goes to <b>sealed/</b> — you see filenames, never contents.</div>
+    </div>
+    <div class="card">
+      <h4><span class="dot" style="background:var(--red)"></span>/generator</h4>
+      <p>Solves, implements, fixes — for comparison against your finished attempt.</p>
+      <div class="rule">Boundary: <b>downstream only.</b> No attempt shown, no solution given.</div>
+    </div>
+  </div>
+  <div class="callout"><b>Why the ceremony matters:</b> your documented failure mode is accepting agent output when uncertain. Every one of these boundaries is a wall between "Claude helps me learn" and "Claude does it and I nod." The friction is not overhead — the friction is the curriculum.</div>
+</section>
+
+<!-- ============ SECTION 3: WEEKLY LOOP ============ -->
+<section id="week">
+  <div class="sec-label">03 · the weekly loop</div>
+  <h2>Click a day for its playbook</h2>
+  <p>The week is a pipeline: Sunday manufactures it, Monday–Wednesday build skill, Thursday attacks what you built 1–2 weeks ago, Friday drills the supervision habit itself. Each card below opens a minute-by-minute playbook with the actual commands.</p>
+
+  <div class="pipeline" role="tablist" aria-label="Weekly rotation">
+    <button class="day" role="tab" data-day="sun" aria-selected="false">
+      <div class="d-name">sun</div><div class="d-slot">Prep: author the week</div>
+      <div class="d-min">30–45 min</div><span class="badge prep">FACTORY</span>
+    </button>
+    <button class="day active" role="tab" data-day="mon" aria-selected="true">
+      <div class="d-name">mon</div><div class="d-slot">Laddered build drill</div>
+      <div class="d-min">30 min</div>
+    </button>
+    <button class="day" role="tab" data-day="tue" aria-selected="false">
+      <div class="d-name">tue</div><div class="d-slot">Idiom deck + pattern</div>
+      <div class="d-min">10 + 20 min</div><span class="badge drop">DROP · WK 3–5</span>
+    </button>
+    <button class="day" role="tab" data-day="wed" aria-selected="false">
+      <div class="d-name">wed</div><div class="d-slot">Big-O → concurrency → internals</div>
+      <div class="d-min">30 min</div><span class="badge drop">DROP · WK 6+</span>
+    </button>
+    <button class="day" role="tab" data-day="thu" aria-selected="false">
+      <div class="d-name">thu</div><div class="d-slot">Bug hunt with controls</div>
+      <div class="d-min">30 min</div>
+    </button>
+    <button class="day" role="tab" data-day="fri" aria-selected="false">
+      <div class="d-name">fri</div><div class="d-slot">Explain-before-accept</div>
+      <div class="d-min">30 min</div>
+    </button>
+  </div>
+
+  <div class="drop-note"><span>⚠</span><div><b>Bad week?</b> Run four days and skip the drop day — Tuesday during weeks 3–5, Wednesday from week 6. That is the buffer working as designed, not falling behind. Never "make it up."</div></div>
+
+  <!-- MON -->
+  <div class="playbook" id="pb-mon" role="tabpanel">
+    <div class="pb-head"><span>❯ monday — laddered build</span><span class="t">LEARN at rungs 1–2 · DRILL at 3–4</span></div>
+    <div class="pb-body">
+      <div class="step"><div class="min">0–2</div><div class="what"><b>Open the sheet, start the timer.</b><div class="sub">Check <code class="inl">log.md</code> for your current rung on this primitive (worker pool, LRU cache, …).</div>
+      <div class="term"><span class="pr">$</span> cd go-dojo && cat worksheets/2026-w31/mon.md</div></div></div>
+      <div class="step"><div class="min">2–25</div><div class="what"><b>Attempt at your rung, cold.</b><div class="sub">Rung 1–2 (learning): work with the reference open, or <code class="inl">/tutor</code> for the concept — never the exercise. Rung 3–4 (from memory / race): editor only, no agent, write into <code class="inl">src/</code> with tests.</div></div></div>
+      <div class="step"><div class="min">25–28</div><div class="what"><b>Compare or verify.</b><div class="sub">Rungs 1–3: run your tests. Rung 4: now — and only now — <code class="inl">/generator</code>, paste your finished code, compare approaches.</div></div></div>
+      <div class="step"><div class="min">28–30</div><div class="what"><b>Log and commit.</b><div class="sub">Rung advances only on two clean unaided runs, different primitives, inside the clock.</div>
+      <div class="term"><span class="pr">$</span> git add -A && git commit -m <span class="st">"mon: worker-pool rung3 clean 1/2"</span></div></div></div>
+    </div>
+  </div>
+
+  <!-- TUE -->
+  <div class="playbook hidden" id="pb-tue" role="tabpanel">
+    <div class="pb-head"><span>❯ tuesday — idiom deck + pattern</span><span class="t">LEARN new / DRILL review</span></div>
+    <div class="pb-body">
+      <div class="step"><div class="min">0–10</div><div class="what"><b>Idiom deck, typed cold.</b><div class="sub">Pick the scheduled snippets from <code class="inl">idioms/</code> (heap, set-via-map, sort.Slice, …). Type each from memory into a scratch file until it compiles. No peeking; a peek means it's not automatic yet — reschedule it.</div></div></div>
+      <div class="step"><div class="min">10–27</div><div class="what"><b>One pattern, one problem.</b><div class="sub">New pattern: <code class="inl">/tutor</code> a worked example, then write the <b>recognition cue</b> ("when I see X, think Y") in the sheet before solving. Review day: solve a spaced re-attempt from the log queue, cold.</div></div></div>
+      <div class="step"><div class="min">27–30</div><div class="what"><b>Log: pattern, cue, outcome.</b><div class="sub">Weeks 3–5 only: this is your drop day if the week goes bad.</div></div></div>
+    </div>
+  </div>
+
+  <!-- WED -->
+  <div class="playbook hidden" id="pb-wed" role="tabpanel">
+    <div class="pb-head"><span>❯ wednesday — foundations</span><span class="t">LEARN · pre-test gated</span></div>
+    <div class="pb-body">
+      <div class="step"><div class="min">0–5</div><div class="what"><b>Pre-test first, always.</b><div class="sub">Cold attempt at the unit's own review drill (authored Sunday, answer sealed). Pass cold → the unit is cut, pull the next one forward. Fail → that failure is your entry point.</div></div></div>
+      <div class="step"><div class="min">5–27</div><div class="what"><b>The unit.</b><div class="sub">Weeks 1–2: Big-O on code <i>you wrote this week</i>. Weeks 3–5: concurrency on-ramp, failure-modes first — <code class="inl">/tutor goroutine leaks: show me 3 realistic examples and quiz me</code>. Week 6+: internals / debugging alternating. Debugging days: failing test → <b>written hypothesis</b> in the sheet → then tools → <code class="inl">/generator</code> only afterward, for comparison.</div></div></div>
+      <div class="step"><div class="min">27–30</div><div class="what"><b>Post-test = the same pre-test drill.</b><div class="sub">Score it, log the delta. Overtime token allowed here if the unit is one push from closing (LEARN-only, max +30, two per week).</div></div></div>
+    </div>
+  </div>
+
+  <!-- THU -->
+  <div class="playbook hidden" id="pb-thu" role="tabpanel">
+    <div class="pb-head"><span>❯ thursday — bug hunt</span><span class="t">DRILL · signal detection</span></div>
+    <div class="pb-body">
+      <div class="step"><div class="min">0–2</div><div class="what"><b>Open the variants. Do not open sealed/.</b><div class="sub">Sunday's Author took code you wrote 7–14 days ago from git history and produced 3–5 variants; 0–2 are defective and you don't know how many. Deck day? Flash cards first — and only 3 variants, not 5.</div></div></div>
+      <div class="step"><div class="min">2–25</div><div class="what"><b>Verdict on every variant, in writing, before any reveal.</b><div class="sub">For each: CLEAN or DEFECTIVE, and if defective — the line and the failure it causes at runtime. Read the boring parts hardest: error paths, cleanup, goroutine lifetimes. That's where Author was told to hide them.</div></div></div>
+      <div class="step"><div class="min">25–30</div><div class="what"><b>Score against the key — strictly.</b>
+      <div class="term"><span class="pr">$</span> claude<br><span class="pr">&gt;</span> /score thursday hunt — my verdicts are in worksheets/2026-w31/thu.md, key is sealed/2026-w31/thu-key.md</div>
+      <div class="sub"><b>False positives count as errors.</b> Calling clean code buggy is a failed detection, not caution. "Zero defects planted, zero called" is a win — log it proudly. Accuracy ≥60% over six sessions is a Phase 2 gate.</div></div></div>
+    </div>
+  </div>
+
+  <!-- FRI -->
+  <div class="playbook hidden" id="pb-fri" role="tabpanel">
+    <div class="pb-head"><span>❯ friday — explain-before-accept</span><span class="t">DRILL · the #1 topic</span></div>
+    <div class="pb-body">
+      <div class="step"><div class="min">0–3</div><div class="what"><b>Get a diff.</b><div class="sub">Best: a real agent-generated diff from your week at work (sanitized if needed). Fallback: Sunday's Author pre-generated a feature diff for a small service in <code class="inl">src/</code>.</div></div></div>
+      <div class="step"><div class="min">3–25</div><div class="what"><b>The four-part write-up, in the sheet, before running anything.</b><div class="sub">(1) What it does, one sentence. (2) <b>Every error path</b> — source, handling, what the caller can now distinguish. (3) Every copy-vs-share of a value, intended or not. (4) The one line most likely to be wrong, and why. Section 2 is mandatory and scored separately. No error paths at all? That IS the finding — write it down.</div></div></div>
+      <div class="step"><div class="min">25–30</div><div class="what"><b>Score section 2, log it.</b><div class="sub">From week 6: alternate Fridays end at minute 20 and the last 10 minutes run the retro — race-the-agent, alternating with spec-first table-test trials.</div></div></div>
+    </div>
+  </div>
+
+  <!-- SUN -->
+  <div class="playbook hidden" id="pb-sun" role="tabpanel">
+    <div class="pb-head"><span>❯ sunday — the factory</span><span class="t">30–45 min · floor: 10 min</span></div>
+    <div class="pb-body">
+      <div class="step"><div class="min">0–5</div><div class="what"><b>Triage the log.</b><div class="sub">What's due in the spaced queue? Any rung advancement? Any real bug this week that needs its "would my drills have caught it?" verdict in <code class="inl">real-bugs.md</code>?</div></div></div>
+      <div class="step"><div class="min">5–30</div><div class="what"><b>One /author session builds the whole week.</b>
+      <div class="term"><span class="pr">$</span> claude<br><span class="pr">&gt;</span> /author week 2026-w32: mon = worker pool at rung 3; tue = sliding window (new) + idioms heap,set; wed = concurrency unit 2 with pre-test; thu = hunt variants from src/ code committed 7–14 days ago, weight concurrency; fri = feature diff for the url-shortener. Sheets to worksheets/2026-w32/, all keys to sealed/2026-w32/.</div>
+      <div class="sub">Git history is your aged-code inventory — Author picks hunt targets by commit date, which is why Monday's commit messages matter.</div></div></div>
+      <div class="step"><div class="min">30–40</div><div class="what"><b>Maintenance.</b><div class="sub">Refresh sabotage weighting, <code class="inl">go version</code> check against the catalogue pin, adherence tally (7-of-10 per fortnight, no streaks). Commit.</div></div></div>
+      <div class="step"><div class="min">—</div><div class="what"><b>The 10-minute floor (bad Sunday).</b><div class="sub">Author <b>Monday and Thursday only</b>. Tue/Wed/Fri run from <code class="inl">templates/</code>. A missed Sunday degrades the week; it can no longer stall it.</div></div></div>
+    </div>
+  </div>
+
+  <h3>Anatomy of every 30-minute session</h3>
+  <div class="anatomy">
+    <div style="flex:1"><div class="seg-t">0–2</div><div class="seg-m">open sheet · timer on</div></div>
+    <div style="flex:6;background:var(--cyan-wash)"><div class="seg-t">2–25</div><div class="seg-m">the work — your attempt first, always</div></div>
+    <div style="flex:2"><div class="seg-t">25–28</div><div class="seg-m">score / compare</div></div>
+    <div style="flex:2;background:var(--cyan-wash)"><div class="seg-t">28–30</div><div class="seg-m">log line · git commit</div></div>
+  </div>
+  <p style="font-size:14px;color:var(--ink-soft);margin-top:10px">If the timer dies and you can't do the full session, every sheet carries a written 10-minute floor version. Ten honest minutes beats zero, and it keeps the fortnightly 7-of-10 alive.</p>
+</section>
+
+<!-- ============ SECTION 4: WORK ============ -->
+<section id="work">
+  <div class="sec-label">04 · the day job — where the plan actually pays out</div>
+  <h2>The standing rule at work</h2>
+  <p>The worksheets are the gym; the job is the sport. Every agent-generated diff, in <b>any</b> language, at work or in practice, hits this gate:</p>
+  <div class="callout"><b>Full four-part written treatment</b> if the diff is over <b>80 lines</b>, or touches goroutines, channels, mutexes, <code class="inl">context</code> propagation, or error handling at <b>any</b> size. Everything smaller: section 4 only — "the one line most likely to be wrong, and why." Keep a scratch file or a sticky note with this threshold where you review; an undefined threshold defaults to never, and so does a forgotten one.</div>
+  <p>And the loop that keeps the whole system honest: when a real bug reaches review or production, within 24 hours append to <code class="inl">real-bugs.md</code> — what it was, and the verdict: <b>would this week's drills have caught it?</b> Three consecutive "no"s means the sabotage bank has drifted from reality; rebuild it from the real-bug list. This is the only place reality grades your curriculum. Don't skip it because the bug was embarrassing — embarrassing bugs are the syllabus.</p>
+</section>
+
+<!-- ============ SECTION 5: FIELD NOTES ============ -->
+<section id="notes">
+  <div class="sec-label">05 · field notes — the things you'll forget by week 3</div>
+  <h2>Discipline points and quiet traps</h2>
+
+  <div class="fn"><div class="n">01</div><div><h4>The sealed folder is the whole game</h4><p>Every drill's value comes from you committing to an answer <b>before</b> seeing the key. One casual <code class="inl">cat sealed/…</code> converts a drill into reading. CLAUDE.md tells Claude to refuse; help it help you — never tab-complete into that folder, and consider <code class="inl">chmod 000 sealed/2026-w32</code> until Sunday if you don't trust Friday-night you.</p></div></div>
+
+  <div class="fn"><div class="n">02</div><div><h4>Fresh context per mode, always</h4><p><code class="inl">/clear</code> between roles. A Generator that watched Author build the answer key isn't generating — it's leaking. A scorer grading in the same session that produced your hints will grade warmly. New session, paste only what the role needs.</p></div></div>
+
+  <div class="fn"><div class="n">03</div><div><h4>Feeling fluent is not the same as learning</h4><p>The sessions that feel smooth — reading Tutor explanations, watching Generator solve — produce the least retention. The ones that feel awful — cold pre-tests, rung-3 blanks, hunt verdicts you're unsure of — produce the most. Desirable difficulty is the plan working. If a week felt easy, suspect it.</p></div></div>
+
+  <div class="fn"><div class="n">04</div><div><h4>Suspicion is not detection</h4><p>Around week 4 you'll be tempted to call everything defective — it feels rigorous. It isn't: false positives are scored as errors because a reviewer who flags everything is as useless as one who flags nothing. The skill is <b>calibration</b>, and "this is clean, and here's why I'm confident" is the harder verdict.</p></div></div>
+
+  <div class="fn"><div class="n">05</div><div><h4>The log is the product; worksheets are disposable</h4><p>Twelve weeks from now the worksheets are landfill and <code class="inl">log.md</code> is the asset — it drives spaced re-attempts, rung state, gate evidence, and the week-12 audit. Sixty seconds per session, one line, never skipped, never rewritten. When in doubt what to log: <b>what you got wrong and what you'd do differently.</b></p></div></div>
+
+  <div class="fn"><div class="n">06</div><div><h4>Keep permission prompts ON for drills</h4><p>Claude Code's auto-accept modes are great for real work and poison here — the entire plan exists because accepting without reading is your habit. In this repo, run interactive, read every proposed edit, and treat each accept prompt as a free rep of the exact skill being trained.</p></div></div>
+
+  <div class="fn"><div class="n">07</div><div><h4>Don't tune the plan mid-phase</h4><p>By week 5 you'll have ideas for improving the rotation. Write them in the log's parking lot and change <b>nothing</b> until a gate review. Fiddling with the system is the most respectable-looking form of quitting it — four panels already argued this; your job is contact with Monday.</p></div></div>
+
+  <div class="fn"><div class="n">08</div><div><h4>The restart rule, verbatim</h4><p>After any break: resume at the current rotation day (never "catch up"), flash deck only for two days, no spaced re-attempts in week one back. Missed sessions are gone and owed to no one. Adherence is 7-of-10 per fortnight — there are no streaks to break, by design, because streak-guilt kills plans like this.</p></div></div>
+
+  <div class="fn"><div class="n">09</div><div><h4>Tokens are decisions, not drift</h4><p>An overtime token is spent by saying out loud "I'm spending a token" and setting a new 30-minute timer — LEARN only, two per week, non-rolling. Blowing 20 minutes past the bell without deciding is not a token; it's the timer dying. And a unit that burns a token without closing is mis-scoped: split it, log it, no second token that week.</p></div></div>
+
+  <div class="fn"><div class="n">10</div><div><h4>Commit messages are infrastructure</h4><p><code class="inl">mon: rate-limiter rung2 clean 2/2 → advance</code> costs five seconds and is exactly how Sunday's Author finds 7–14-day-old hunt targets and how the week-12 audit reconstructs your trajectory. Lazy commit messages quietly break Thursday.</p></div></div>
+
+  <div class="fn"><div class="n">11</div><div><h4>Watch for the agent's tells</h4><p>If Thursday starts feeling easy, check <b>why</b> you're catching bugs. "The variable's named <code class="inl">tmp</code> and Author always does that" is learning the agent, not Go. Log the tell, tell Author to break the habit, and let <code class="inl">real-bugs.md</code> keep displacing the synthetic catalogue — production doesn't have tells.</p></div></div>
+
+  <div class="fn"><div class="n">12</div><div><h4>Sunday is sacred; the floor is the fallback, not the default</h4><p>The 10-minute floor exists so a bad Sunday can't stall the week — but if you run the floor two Sundays straight, that's a signal, not a lifestyle. Log it in the adherence tally and treat the third Sunday as non-negotiable. The template week keeps you moving; only real prep keeps you progressing.</p></div></div>
+
+  <div class="drop-note" style="margin-top:20px"><span>⚠</span><div><b>The one metric that predicts everything:</b> sessions started. Not sessions perfected, not rungs cleared — started. Every rule above (floors, no streaks, drop day, restart protocol) exists to protect that number. When in doubt, open the sheet and start the timer; the plan handles the rest.</div></div>
+</section>
+
+<!-- ============ SECTION 6: FIRST WEEK ============ -->
+<section id="first">
+  <div class="sec-label">06 · your first seven days</div>
+  <h2>Bootstrapping order</h2>
+  <details open>
+    <summary>Day 0 (any day) — build the repo · ~90 min, once</summary>
+    <div class="det-body"><p>Sections 01 above, top to bottom: repo, CLAUDE.md, the four commands, catalogue (version-verified), template week, idiom deck, log headers. Also write the <b>work threshold note</b> and put it where you review diffs. Commit everything.</p></div>
+  </details>
+  <details>
+    <summary>First Sunday — author week 1</summary>
+    <div class="det-body"><p>Run the full Sunday playbook. Week 1 specifics: Monday enters the ladder at the lowest rung you can't do cold (expect rung 1–2 — that's correct, not embarrassing); Wednesday is Big-O week 1; Thursday has no 7-day-old code yet, so Author seeds the hunt from small programs it writes fresh — from week 3 onward it's your aged code, forever.</p></div>
+  </details>
+  <details>
+    <summary>Week 1 — run it deliberately slow</summary>
+    <div class="det-body"><p>The goal of week 1 is not skill, it's <b>installing the loop</b>: timer on, attempt first, sealed folder untouched, log line, commit. Expect every session to run awkward and slightly over. That's setup cost, not a verdict on the plan. By week 3 the mechanics are invisible and the content is all that's left.</p>
+    <ul><li>Score yourself strictly on the mechanics, generously on the Go.</li><li>End the week with the fortnightly tally started: sessions attempted, floors used, tokens spent.</li><li>Then stop evaluating and just run weeks 2–12. The next scheduled judgment of this plan is the week-12 gate, against the log — not a feeling on a Tuesday.</li></ul></div>
+  </details>
+</section>
+
+<footer>
+  go-dojo operating manual · companion to the Final (Audited) ruling · v4<br>
+  185–245 min/week · gates, not dates · the drop day is the buffer · sessions started is the metric
+</footer>
+
+</div>
+
+<script>
+  // day tabs
+  const days=document.querySelectorAll('.day');
+  const panels={sun:'pb-sun',mon:'pb-mon',tue:'pb-tue',wed:'pb-wed',thu:'pb-thu',fri:'pb-fri'};
+  days.forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      days.forEach(b=>{b.classList.remove('active');b.setAttribute('aria-selected','false');});
+      btn.classList.add('active');btn.setAttribute('aria-selected','true');
+      Object.values(panels).forEach(id=>document.getElementById(id).classList.add('hidden'));
+      document.getElementById(panels[btn.dataset.day]).classList.remove('hidden');
+    });
+  });
+  // copy buttons
+  function cp(btn){
+    const block=btn.parentElement.cloneNode(true);
+    block.querySelector('.copy-btn').remove();
+    const text=block.textContent.trim();
+    navigator.clipboard.writeText(text).then(()=>{
+      const old=btn.textContent;btn.textContent='copied ✓';
+      setTimeout(()=>btn.textContent=old,1400);
+    }).catch(()=>{btn.textContent='select & copy';setTimeout(()=>btn.textContent='copy',1600);});
+  }
+</script>
+</body>
+</html>
