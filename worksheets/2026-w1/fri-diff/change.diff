@@ -1,0 +1,173 @@
+--- a/sessions/store.go
++++ b/sessions/store.go
+@@ -2,7 +2,10 @@
+ package sessions
+ 
+ import (
++	"encoding/json"
+ 	"errors"
++	"fmt"
++	"os"
+ 	"sync"
+ 	"time"
+ )
+@@ -10,6 +13,9 @@
+ // ErrNotFound is returned when no session exists for a token.
+ var ErrNotFound = errors.New("sessions: not found")
+ 
++// ErrExpired is returned when a session exists but has aged out.
++var ErrExpired = errors.New("sessions: expired")
++
+ // Session is one logged-in user's state.
+ type Session struct {
+ 	Token   string
+@@ -22,12 +28,67 @@
+ type Store struct {
+ 	mu   sync.RWMutex
+ 	byID map[string]*Session
++	ttl  time.Duration
++	stop chan struct{}
++	once sync.Once
+ }
+ 
+ func New() *Store {
+ 	return &Store{byID: make(map[string]*Session)}
+ }
+ 
++// NewWithTTL returns a store that expires sessions older than ttl and
++// sweeps them out every interval. Call Close when done with it.
++func NewWithTTL(ttl, interval time.Duration) *Store {
++	s := &Store{
++		byID: make(map[string]*Session),
++		ttl:  ttl,
++		stop: make(chan struct{}),
++	}
++	go s.sweepLoop(interval)
++	return s
++}
++
++func (s *Store) sweepLoop(interval time.Duration) {
++	t := time.NewTicker(interval)
++	defer t.Stop()
++	for {
++		select {
++		case <-t.C:
++			s.Sweep()
++		case <-s.stop:
++			return
++		}
++	}
++}
++
++// Sweep drops every expired session.
++func (s *Store) Sweep() int {
++	s.mu.Lock()
++	defer s.mu.Unlock()
++	if s.ttl <= 0 {
++		return 0
++	}
++	cutoff := time.Now().Add(-s.ttl)
++	n := 0
++	for token, sess := range s.byID {
++		if sess.Created.Before(cutoff) {
++			delete(s.byID, token)
++			n++
++		}
++	}
++	return n
++}
++
++// Close stops the sweeper.
++func (s *Store) Close() {
++	s.once.Do(func() {
++		if s.stop != nil {
++			close(s.stop)
++		}
++	})
++}
++
+ // Put stores a session under its token.
+ func (s *Store) Put(sess Session) {
+ 	s.mu.Lock()
+@@ -37,19 +98,30 @@
+ 	s.byID[sess.Token] = &cp
+ }
+ 
+-// Get returns a copy of the session for token.
+-func (s *Store) Get(token string) (Session, error) {
++// Get returns the session for token, or ErrExpired if it has aged out.
++func (s *Store) Get(token string) (*Session, error) {
+ 	s.mu.RLock()
+ 	defer s.mu.RUnlock()
+ 	sess, ok := s.byID[token]
+ 	if !ok {
+-		return Session{}, ErrNotFound
++		return nil, ErrNotFound
+ 	}
+-	cp := *sess
+-	cp.Scopes = append([]string(nil), sess.Scopes...)
+-	return cp, nil
++	if s.ttl > 0 && time.Since(sess.Created) > s.ttl {
++		return nil, ErrExpired
++	}
++	return sess, nil
+ }
+ 
++// Touch extends a session's life by resetting its Created stamp.
++func (s *Store) Touch(token string) error {
++	sess, err := s.Get(token)
++	if err != nil {
++		return err
++	}
++	sess.Created = time.Now()
++	return nil
++}
++
+ // Delete removes a session. Deleting a missing token is not an error.
+ func (s *Store) Delete(token string) {
+ 	s.mu.Lock()
+@@ -63,3 +135,44 @@
+ 	defer s.mu.RUnlock()
+ 	return len(s.byID)
+ }
++
++// Persist writes every live session to path as JSON.
++func (s *Store) Persist(path string) error {
++	s.mu.RLock()
++	defer s.mu.RUnlock()
++
++	f, err := os.Create(path)
++	if err != nil {
++		return fmt.Errorf("sessions: persist %s: %w", path, err)
++	}
++	defer f.Close()
++
++	all := make([]*Session, 0, len(s.byID))
++	for _, sess := range s.byID {
++		all = append(all, sess)
++	}
++	if err := json.NewEncoder(f).Encode(all); err != nil {
++		return fmt.Errorf("sessions: encode %s: %w", path, err)
++	}
++	return nil
++}
++
++// Restore replaces the store's contents with the sessions in path.
++func (s *Store) Restore(path string) error {
++	b, err := os.ReadFile(path)
++	if err != nil {
++		return fmt.Errorf("sessions: restore %s: %v", path, err)
++	}
++	var all []*Session
++	if err := json.Unmarshal(b, &all); err != nil {
++		return fmt.Errorf("sessions: decode %s: %w", path, err)
++	}
++
++	s.mu.Lock()
++	defer s.mu.Unlock()
++	s.byID = make(map[string]*Session, len(all))
++	for _, sess := range all {
++		s.byID[sess.Token] = sess
++	}
++	return nil
++}
