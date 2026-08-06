@@ -23,9 +23,8 @@ go version                      # record it at the top of catalogue.md
 #           sheet ends with its written 10-minute floor version.
 #   /author Create idioms/ with one file per snippet from the idiom
 #           deck list in go-native-plan-final.md.
-#   > Read catalogue.md. For each entry write a minimal program
-#     demonstrating the defect, run it on this toolchain, flag any
-#     that no longer reproduce.
+scripts/catalogue-verify/run.sh   # flags any catalogue.md entry the
+                                   # toolchain no longer reproduces
 git add -A && git commit -m "day 0: operational"
 ```
 
@@ -34,12 +33,18 @@ or error-handling touch) and put it where you review diffs.
 
 ## The seal workflow (mechanical, not just prose)
 
-- **Sunday:** /author runs `scripts/sample.py <week>` (real
-  randomness, outcome written straight into sealed/ — never the
-  transcript), authors the week, verifies, then a fresh-context
-  verifier pass checks the output. **Commit, then**
-  `scripts/seal.sh <week>` — git cannot read sealed files, so the
-  order matters.
+- **Sunday:** run `bash scripts/catalogue-verify/run.sh` whenever
+  `go version` has changed since the last run (compare against the
+  pin at the top of catalogue.md) — it re-verifies every entry
+  against the installed toolchain and flags anything the toolchain
+  no longer reproduces, same precedent as loop-var capture (Go 1.22)
+  and `time.After` timer GC (Go 1.23). Update catalogue.md's pin line
+  and reword/remove any flagged entry before authoring. Then /author
+  runs `scripts/sample.py <week>` (real randomness, outcome written
+  straight into sealed/ — never the transcript), authors the week,
+  verifies, then a fresh-context verifier pass checks the output.
+  **Commit, then** `scripts/seal.sh <week>` — git cannot read sealed
+  files, so the order matters.
 - **Mon–Sat:** sealed/<week> is mode 000. A casual `cat` fails; so
   does a stray grep. CLAUDE.md rule 1 is the second wall, not the
   only one.
