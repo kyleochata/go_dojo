@@ -7,7 +7,7 @@ Label: LEARN at rungs 0–2, DRILL at rungs 3–4.
 **Primitive:** LRU cache (`Get`, `Put`, fixed capacity, eviction of
 the least-recently-used entry)
 
-**Entry rung:** ____ — enter at the lowest rung you can't do cold.
+**Entry rung:** __1__ — enter at the lowest rung you can't do cold.
 The rung-state table in log.md is empty, so nothing is cleared and
 nothing is barred: if you can't type an LRU cold right now, that is
 rung 0, 1 or 2, and starting there is the correct move, not a
